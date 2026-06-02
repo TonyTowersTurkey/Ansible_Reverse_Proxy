@@ -1,0 +1,172 @@
+---
+- name: Update apt cache and upgrade system
+  apt:
+    update_cache: yes
+    upgrade: dist
+    autoremove: yes
+    autoclean: yes
+
+- name: Install base packages
+  apt:
+    name: "{{ reverse_proxy_base_packages }}"
+    state: present
+    update_cache: yes
+
+- name: Add Docker official GPG key
+  ansible.builtin.apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker official repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+    filename: docker
+    update_cache: yes
+
+- name: Install Docker Engine packages
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: present
+    update_cache: yes
+
+- name: Ensure docker service is started and enabled
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Add ubuntu user to docker group
+  user:
+    name: "{{ ansible_user | default('ubuntu') }}"
+    groups: docker
+    append: yes
+
+- name: Create secondary admin user
+  user:
+    name: "{{ reverse_proxy_admin_user }}"
+    groups: sudo
+    shell: /bin/bash
+    create_home: yes
+    state: present
+  when: reverse_proxy_create_admin_user
+
+- name: Create secondary admin SSH directory
+  file:
+    path: "/home/{{ reverse_proxy_admin_user }}/.ssh"
+    state: directory
+    owner: "{{ reverse_proxy_admin_user }}"
+    group: "{{ reverse_proxy_admin_user }}"
+    mode: '0700'
+  when:
+    - reverse_proxy_create_admin_user
+    - reverse_proxy_admin_authorized_key != ''
+
+- name: Install secondary admin public key
+  copy:
+    content: "{{ reverse_proxy_admin_authorized_key }}"
+    dest: "/home/{{ reverse_proxy_admin_user }}/.ssh/authorized_keys"
+    owner: "{{ reverse_proxy_admin_user }}"
+    group: "{{ reverse_proxy_admin_user }}"
+    mode: '0600'
+  when:
+    - reverse_proxy_create_admin_user
+    - reverse_proxy_admin_authorized_key != ''
+
+- name: Confirm sudo privileges
+  command: whoami
+  become: true
+  register: sudo_check
+  failed_when: sudo_check.stdout != 'root'
+
+- name: Allow required firewall ports
+  block:
+    - name: Allow each port through UFW
+      command: ufw allow {{ item }}/tcp
+      loop: "{{ reverse_proxy_ufw_allow_ports }}"
+
+    - name: Enable UFW firewall
+      command: ufw --force enable
+  when: reverse_proxy_ufw_enabled
+
+- name: Ensure Tailscale install script is present
+  ansible.builtin.command: /usr/bin/tailscale version
+  register: tailscale_check
+  failed_when: false
+  changed_when: false
+  when: reverse_proxy_tailscale_enabled
+
+- name: Install Tailscale
+  ansible.builtin.shell: curl -fsSL https://tailscale.com/install.sh | sh
+  args:
+    executable: /bin/bash
+    creates: /usr/bin/tailscale
+  when:
+    - reverse_proxy_tailscale_enabled
+    - tailscale_check.rc != 0
+
+- name: Start and enable Tailscale daemon
+  systemd:
+    name: tailscaled
+    state: started
+    enabled: yes
+  when: reverse_proxy_tailscale_enabled
+
+- name: Bring up Tailscale with auth key
+  ansible.builtin.command: tailscale up --authkey {{ reverse_proxy_tailscale_auth_key }} --hostname {{ inventory_hostname }}
+  when:
+    - reverse_proxy_tailscale_enabled
+    - reverse_proxy_tailscale_auth_key != ''
+
+- name: Create Nginx Proxy Manager directory
+  file:
+    path: "{{ reverse_proxy_npm_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create Nginx Proxy Manager data directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - "{{ reverse_proxy_npm_path }}/data"
+    - "{{ reverse_proxy_npm_path }}/letsencrypt"
+
+- name: Write Nginx Proxy Manager docker-compose configuration
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ reverse_proxy_npm_path }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Deploy Nginx Proxy Manager with Docker Compose
+  ansible.builtin.command:
+    cmd: docker compose up -d
+    chdir: "{{ reverse_proxy_npm_path }}"
+  environment:
+    COMPOSE_HTTP_TIMEOUT: "200"
+
+- name: Ensure fail2ban configuration exists
+  template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart fail2ban
+
+- name: Ensure fail2ban service is started and enabled
+  service:
+    name: fail2ban
+    state: started
+    enabled: yes

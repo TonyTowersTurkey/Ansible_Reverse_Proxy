@@ -1,0 +1,26 @@
+server {
+    listen {{ proxy_listen_port }};
+    server_name {{ proxy_server_name }};
+
+    {% if proxy_enable_https %}
+    listen 443 ssl http2;
+    ssl_certificate {{ proxy_ssl_cert_path }};
+    ssl_certificate_key {{ proxy_ssl_key_path }};
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+    {% endif %}
+
+    location / {
+        proxy_pass http://backend_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+upstream backend_upstream {
+{% for backend in proxy_backend_hosts %}
+    server {{ backend.host }}:{{ backend.port }};
+{% endfor %}
+}

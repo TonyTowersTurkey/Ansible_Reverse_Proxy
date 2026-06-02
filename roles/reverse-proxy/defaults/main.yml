@@ -1,0 +1,32 @@
+---
+reverse_proxy_base_packages:
+  - curl
+  - ca-certificates
+  - gnupg
+  - lsb-release
+  - ufw
+  - fail2ban
+
+reverse_proxy_create_admin_user: true
+reverse_proxy_admin_user: antonio
+reverse_proxy_admin_authorized_key: ''
+
+reverse_proxy_tailscale_enabled: true
+reverse_proxy_tailscale_auth_key: ''
+
+reverse_proxy_npm_path: /opt/nginx-proxy-manager
+reverse_proxy_npm_image: jc21/nginx-proxy-manager:latest
+reverse_proxy_npm_ports:
+  - 80
+  - 81
+  - 443
+
+reverse_proxy_ufw_enabled: true
+reverse_proxy_ufw_allow_ports:
+  - 22
+  - 80
+  - 443
+
+reverse_proxy_fail2ban_bantime: 3600
+reverse_proxy_fail2ban_findtime: 600
+reverse_proxy_fail2ban_maxretry: 5

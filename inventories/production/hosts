@@ -1,0 +1,2 @@
+[reverse_proxy]
+proxy.example.com ansible_host=141.148.84.185

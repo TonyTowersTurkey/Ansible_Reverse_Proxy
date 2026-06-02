@@ -1,0 +1,16 @@
+# Ansible and Python artifacts
+*.retry
+*.log
+*.cache
+__pycache__/
+.vscode/
+
+# Local inventory and secret files
+inventory/
+*.pem
+*.key
+*.crt
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,3 @@
+---
+# OS-specific package names can be extended here.
+proxy_certbot_package: certbot

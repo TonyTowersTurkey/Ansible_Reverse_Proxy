@@ -1,0 +1,8 @@
+---
+- name: Configure reverse proxy server
+  hosts: reverse_proxy
+  become: true
+  vars_files:
+    - inventories/production/group_vars/all.yml
+  roles:
+    - reverse-proxy

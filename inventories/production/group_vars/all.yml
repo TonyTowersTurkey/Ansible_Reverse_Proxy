@@ -1,0 +1,17 @@
+ansible_user: ubuntu
+ansible_python_interpreter: /usr/bin/python3
+
+reverse_proxy_create_admin_user: true
+reverse_proxy_admin_user: antonio
+reverse_proxy_admin_authorized_key: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICRHK7Dk+CHtFsa4mQ2PGChKjexporpk96osWl63uD+3'
+
+reverse_proxy_tailscale_enabled: true
+reverse_proxy_tailscale_auth_key: ''
+
+reverse_proxy_npm_path: /opt/nginx-proxy-manager
+reverse_proxy_npm_image: jc21/nginx-proxy-manager:latest
+reverse_proxy_ufw_enabled: true
+reverse_proxy_ufw_allow_ports:
+  - 22
+  - 80
+  - 443

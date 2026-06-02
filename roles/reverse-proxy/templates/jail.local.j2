@@ -1,0 +1,10 @@
+[DEFAULT]
+bantime  = {{ reverse_proxy_fail2ban_bantime }}
+findtime = {{ reverse_proxy_fail2ban_findtime }}
+maxretry = {{ reverse_proxy_fail2ban_maxretry }}
+
+[sshd]
+enabled  = true
+port     = ssh
+filter   = sshd
+logpath  = /var/log/auth.log

@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  author: yourname
+  description: OCI reverse proxy role for Nginx Proxy Manager
+  company: personal
+  license: MIT
+  min_ansible_version: 2.12
+  platforms:
+    - name: Debian
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - all
+
+dependencies: []

@@ -14,3 +14,7 @@ inventory/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Vault password file (local, do not commit)
+.vault_pass.txt
+vault_password.txt
